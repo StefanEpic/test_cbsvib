@@ -1,0 +1,52 @@
+version: '3'
+
+services:
+  backend:
+    container_name: backend
+    image: backend
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    command: >
+      sh -c "python manage.py makemigrations && 
+      python manage.py migrate && 
+      python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - static_data:/static
+    ports:
+      - "8000:8000"
+    networks:
+      - custom
+
+  redis:
+    container_name: redis
+    image: redis:alpine
+    restart: unless-stopped
+    command: redis-server
+    expose:
+      - 6379
+    networks:
+      - custom
+
+  celery:
+    container_name: celery
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    command: celery -A core worker -l info
+    volumes:
+      - ./core:/core
+    depends_on:
+      - redis
+      - backend
+    networks:
+      - custom
+
+networks:
+  custom:
+    driver: bridge
+
+volumes:
+  static_data:

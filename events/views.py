@@ -5,7 +5,7 @@ from rest_framework import mixins, viewsets, filters
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from events import docs, models
+from events import docs, models, tasks
 from events import serializers
 
 
@@ -24,6 +24,9 @@ class EventViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.Crea
     ordering_fields = ("date",)
     filter_backends = (filters.SearchFilter, filters.OrderingFilter)
     permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        tasks.save_event_with_delay.apply_async(args=[serializer.data], countdown=60)
 
     def retrieve(self, request: requests.Request, *args: typing.Any, **kwargs: typing.Any) -> Response:
         instance = self.get_object()
